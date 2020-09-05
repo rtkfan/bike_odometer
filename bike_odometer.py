@@ -29,7 +29,7 @@ def main():
     strava_clientid, strava_clientsecret, athlete_id = check_envvars()
 
     # connect to db
-    con = sqlite3.connect('./odometer.db')
+    con = sqlite3.connect('./data/odometer.db')
     con.row_factory = sqlite3.Row
     cur = con.cursor()
 
