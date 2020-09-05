@@ -12,12 +12,12 @@ def check_envvars():
     clientid = os.getenv('STRAVA_CLIENTID')
     clientsecret = os.getenv('STRAVA_CLIENTSECRET')
     athleteid = os.getenv('STRAVA_ATHLETEID')
-    if (clientid is None or clientsecret is None):
+    if (clientid is None or clientsecret is None or athleteid is None):
         logging.error('%s %s',
                       'Environment variables (STRAVA_CLIENTID, '
                       'STRAVA_CLIENTSECRET) not set')
         exit(-1)
-    return clientid, clientsecret
+    return clientid, clientsecret, athleteid
 
 
 def main():
@@ -26,7 +26,7 @@ def main():
                         level=logging.INFO,
                         datefmt='%H:%M:%S')
 
-    strava_clientid, strava_clientsecret = check_envvars()
+    strava_clientid, strava_clientsecret, athlete_id = check_envvars()
 
     # connect to db
     con = sqlite3.connect('./odometer.db')
@@ -38,7 +38,7 @@ def main():
     # check/refresh latest access token for athlete
     cur.execute("""SELECT * FROM strava_access_token
                    WHERE athlete_id = ?
-                   ORDER BY expires_at DESC LIMIT 1""", [MY_ATHLETE_ID])
+                   ORDER BY expires_at DESC LIMIT 1""", [str(athlete_id)])
     last_auth = cur.fetchone()
 
     last_auth_expire_utc = datetime.datetime.utcfromtimestamp(
