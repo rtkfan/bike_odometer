@@ -102,26 +102,12 @@ def map_activities(in_dict):
     return out_tuple
 
 
-def main():
-
-    logging.basicConfig(format='%(levelname)s %(asctime)s: %(message)s',
-                        level=logging.INFO,
-                        datefmt='%H:%M:%S')
-
-    strava_clientid, strava_clientsecret, athlete_id = check_envvars()
-
-    # connect to db
-    con = sqlite3.connect('./data/odometer.db')
-    con.row_factory = sqlite3.Row
-
-    access_token = get_access_token(con, strava_clientid, strava_clientsecret,
-                                    athlete_id)
-    logging.info('%s %s', 'Fetched access token ', access_token)
+def load_activities_full(access_token, connection):
 
     ipage = 1
     running_count = 0
 
-    cur = con.cursor()
+    cur = connection.cursor()
     cur.execute("""DROP TABLE IF EXISTS stg_activities;""")
     cur.execute("""CREATE TABLE stg_activities
                    AS SELECT * FROM activities WHERE FALSE;""")
@@ -155,11 +141,34 @@ def main():
 
         ipage += 1
 
-    con.commit()
+    connection.commit()
+
+    return running_count
+
+
+def main():
+
+    logging.basicConfig(format='%(levelname)s %(asctime)s: %(message)s',
+                        level=logging.INFO,
+                        datefmt='%H:%M:%S')
+
+    strava_clientid, strava_clientsecret, athlete_id = check_envvars()
+
+    # connect to db
+    con = sqlite3.connect('./data/odometer.db')
+    con.row_factory = sqlite3.Row
+
+    access_token = get_access_token(con, strava_clientid, strava_clientsecret,
+                                    athlete_id)
+    logging.info('%s %s', 'Fetched access token ', access_token)
+
+    rows_loaded = load_activities_full(access_token, con)
+
     logging.info('%s %s %s',
                  'Activities staging table loaded;',
-                 running_count,
+                 rows_loaded,
                  'total records')
+
     # close up shop
     con.close()
 
