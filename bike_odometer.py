@@ -68,6 +68,39 @@ def get_access_token(connection, clientid, clientsecret, athleteid):
     return valid_access_token
 
 
+def map_activities(in_dict):
+
+    if in_dict['start_latlng'] is None:
+        startlatlng = [None, None]
+    else:
+        startlatlng = in_dict['start_latlng']
+
+    if in_dict['end_latlng'] is None:
+        endlatlng = [None, None]
+    else:
+        endlatlng = in_dict['end_latlng']
+
+    out_tuple = (
+        in_dict['id'],                    # activity_id
+        in_dict['athlete']['id'],         # athlete_id
+        in_dict['gear_id'],               # gear_id
+        in_dict['name'],                  # name
+        in_dict['start_date'],            # start_date
+        in_dict['start_date_local'],      # start_date_local
+        in_dict['timezone'],              # timezone
+        in_dict['utc_offset'],            # utc_offset
+        startlatlng[0],                   # start_lat
+        startlatlng[1],                   # start_lng
+        endlatlng[0],                     # end_lat
+        endlatlng[1],                     # end_lng
+        in_dict['distance'],              # distance
+        in_dict['moving_time'],           # moving_time
+        in_dict['elapsed_time'],          # elapsed_time
+        in_dict['total_elevation_gain'])  # total_elevation_gain
+
+    return out_tuple
+
+
 def main():
 
     logging.basicConfig(format='%(levelname)s %(asctime)s: %(message)s',
