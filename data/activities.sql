@@ -3,7 +3,6 @@ CREATE TABLE "activities" (
 	"athlete_id"	INTEGER,
 	"gear_id"	TEXT,
 	"name"	TEXT,
-	"type"	TEXT,
 	"start_date"	TEXT,
 	"start_date_local"	TEXT,
 	"timezone"	TEXT,
@@ -16,8 +15,6 @@ CREATE TABLE "activities" (
 	"moving_time"	INTEGER,
 	"elapsed_time"	INTEGER,
 	"total_elevation_gain"	REAL,
-	"record_uid"	TEXT,
 	"created_at"	TEXT DEFAULT CURRENT_TIMESTAMP,
-	"updated_at"	TEXT DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY("record_uid")
+	"updated_at"	TEXT DEFAULT CURRENT_TIMESTAMP
 )
