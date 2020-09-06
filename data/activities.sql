@@ -1,0 +1,23 @@
+CREATE TABLE "activities" (
+	"activity_id"	INTEGER NOT NULL UNIQUE,
+	"athlete_id"	INTEGER,
+	"gear_id"	TEXT,
+	"name"	TEXT,
+	"type"	TEXT,
+	"start_date"	TEXT,
+	"start_date_local"	TEXT,
+	"timezone"	TEXT,
+	"utc_offset"	REAL,
+	"start_lat"	REAL,
+	"start_lng"	REAL,
+	"end_lat"	REAL,
+	"end_lng"	REAL,
+	"distance"	REAL,
+	"moving_time"	INTEGER,
+	"elapsed_time"	INTEGER,
+	"total_elevation_gain"	REAL,
+	"record_uid"	TEXT,
+	"created_at"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	"updated_at"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY("record_uid")
+)
