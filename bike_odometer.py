@@ -7,6 +7,7 @@ import humanize
 import logging
 
 endpoint_token = 'https://www.strava.com/oauth/token'
+endpoint_activities = 'https://www.strava.com/api/v3/athlete/activities'
 
 
 def check_envvars():
@@ -117,6 +118,48 @@ def main():
                                     athlete_id)
     logging.info('%s %s', 'Fetched access token ', access_token)
 
+    ipage = 1
+    running_count = 0
+
+    cur = con.cursor()
+    cur.execute("""DROP TABLE IF EXISTS stg_activities;""")
+    cur.execute("""CREATE TABLE stg_activities
+                   AS SELECT * FROM activities WHERE FALSE;""")
+
+    while True:
+        payload = {'access_token': access_token,
+                   'page': ipage}
+        r = requests.get(endpoint_activities, params=payload)
+        logging.info('%s %s %s %s',
+                     'API usage:',
+                     r.headers['X-RateLimit-Usage'],
+                     'requests last 15 min/today; limit',
+                     r.headers['X-RateLimit-Limit'])
+        response = json.loads(r.text)
+        if response == []:
+            break
+        rows = [map_activities(i) for i in response if i['type'] == 'Ride']
+        cur.executemany("""INSERT INTO stg_activities(
+                           activity_id, athlete_id, gear_id, name,
+                           start_date, start_date_local, timezone, utc_offset,
+                           start_lat, start_lng, end_lat, end_lng,
+                           distance, moving_time, elapsed_time,
+                           total_elevation_gain)
+                           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        rows)
+        running_count += len(rows)
+        logging.info('%s %s %s',
+                     'Fetched',
+                     running_count,
+                     'rides so far')
+
+        ipage += 1
+
+    con.commit()
+    logging.info('%s %s %s',
+                 'Activities staging table loaded;',
+                 running_count,
+                 'total records')
     # close up shop
     con.close()
 
