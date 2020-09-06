@@ -15,9 +15,7 @@ def check_envvars():
     clientsecret = os.getenv('STRAVA_CLIENTSECRET')
     athleteid = os.getenv('STRAVA_ATHLETEID')
     if (clientid is None or clientsecret is None or athleteid is None):
-        logging.error('%s %s',
-                      'Environment variables (STRAVA_CLIENTID, '
-                      'STRAVA_CLIENTSECRET) not set')
+        logging.error('Environment variables not set')
         exit(-1)
     return clientid, clientsecret, athleteid
 
@@ -38,8 +36,7 @@ def get_access_token(connection, clientid, clientsecret, athleteid):
     # last_auth_ttl is positive if expiry is in the future;
     # humanize assumes the opposite!
     ess_or_dee = 'd' if last_auth_ttl.total_seconds() < 0 else 's'
-    logging.info('%s %s %s %s',
-                 'Latest access token for athlete',
+    logging.info('Latest access token for athlete %s %s %s',
                  last_auth['athlete_id'], 'expire'+ess_or_dee,
                  humanize.naturaltime(-1*last_auth_ttl))
 
@@ -51,9 +48,8 @@ def get_access_token(connection, clientid, clientsecret, athleteid):
                    'refresh_token': last_auth['refresh_token'],
                    'grant_type': 'refresh_token'}
         r = requests.post(endpoint_token, params=payload)
-        logging.info('%s %s %s %s',
-                     'Request to', endpoint_token,
-                     'returned status code', r.status_code)
+        logging.info('Request to %s returned status %s',
+                     endpoint_token, r.status_code)
         response = json.loads(r.text)
 
         cur.execute("""INSERT INTO strava_access_token(athlete_id,
@@ -117,10 +113,8 @@ def stage_activities_full(access_token, connection):
         payload = {'access_token': access_token,
                    'page': ipage}
         r = requests.get(endpoint_activities, params=payload)
-        logging.info('%s %s %s %s',
-                     'API usage:',
+        logging.info('API usage: %s requests last 15 min/today; limit %s',
                      r.headers['X-RateLimit-Usage'],
-                     'requests last 15 min/today; limit',
                      r.headers['X-RateLimit-Limit'])
         response = json.loads(r.text)
         if response == []:
@@ -136,12 +130,8 @@ def stage_activities_full(access_token, connection):
                            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                         rows)
         rows_loaded += len(rows)
-        logging.info('%s %s %s %s %s',
-                     'Staged',
-                     rows_loaded,
-                     'rides so far out of',
-                     rows_scanned,
-                     'total activities')
+        logging.info('Staged %s rides so far out of %s total activities',
+                     rows_loaded, rows_scanned)
 
         ipage += 1
 
@@ -164,7 +154,7 @@ def main():
 
     access_token = get_access_token(con, strava_clientid, strava_clientsecret,
                                     athlete_id)
-    logging.info('%s %s', 'Fetched access token ', access_token)
+    logging.info('Fetched access token: %s', access_token)
 
     rows_scanned, rows_loaded = stage_activities_full(access_token, con)
 
