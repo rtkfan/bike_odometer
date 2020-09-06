@@ -102,7 +102,7 @@ def map_activities(in_dict):
     return out_tuple
 
 
-def load_activities_full(access_token, connection):
+def stage_activities_full(access_token, connection):
 
     ipage = 1
     rows_scanned = 0
@@ -166,7 +166,7 @@ def main():
                                     athlete_id)
     logging.info('%s %s', 'Fetched access token ', access_token)
 
-    rows_scanned, rows_loaded = load_activities_full(access_token, con)
+    rows_scanned, rows_loaded = stage_activities_full(access_token, con)
 
     logging.info('%s %s %s %s %s',
                  'Activities staging table loaded;',
