@@ -105,7 +105,8 @@ def map_activities(in_dict):
 def load_activities_full(access_token, connection):
 
     ipage = 1
-    running_count = 0
+    rows_scanned = 0
+    rows_loaded = 0
 
     cur = connection.cursor()
     cur.execute("""DROP TABLE IF EXISTS stg_activities;""")
@@ -124,6 +125,7 @@ def load_activities_full(access_token, connection):
         response = json.loads(r.text)
         if response == []:
             break
+        rows_scanned += len(response)
         rows = [map_activities(i) for i in response if i['type'] == 'Ride']
         cur.executemany("""INSERT INTO stg_activities(
                            activity_id, athlete_id, gear_id, name,
@@ -133,17 +135,19 @@ def load_activities_full(access_token, connection):
                            total_elevation_gain)
                            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                         rows)
-        running_count += len(rows)
-        logging.info('%s %s %s',
-                     'Fetched',
-                     running_count,
-                     'rides so far')
+        rows_loaded += len(rows)
+        logging.info('%s %s %s %s %s',
+                     'Staged',
+                     rows_loaded,
+                     'rides so far out of',
+                     rows_scanned,
+                     'total activities')
 
         ipage += 1
 
     connection.commit()
 
-    return running_count
+    return rows_scanned, rows_loaded
 
 
 def main():
@@ -162,12 +166,14 @@ def main():
                                     athlete_id)
     logging.info('%s %s', 'Fetched access token ', access_token)
 
-    rows_loaded = load_activities_full(access_token, con)
+    rows_scanned, rows_loaded = load_activities_full(access_token, con)
 
-    logging.info('%s %s %s',
+    logging.info('%s %s %s %s %s',
                  'Activities staging table loaded;',
                  rows_loaded,
-                 'total records')
+                 'activities loaded of',
+                 rows_scanned,
+                 'activities total')
 
     # close up shop
     con.close()
