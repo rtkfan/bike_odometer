@@ -127,7 +127,8 @@ def stage_activities_full(access_token, connection):
                            start_lat, start_lng, end_lat, end_lng,
                            distance, moving_time, elapsed_time,
                            total_elevation_gain)
-                           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+                                  CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
                         rows)
         rows_loaded += len(rows)
         logging.info('Staged %s rides so far out of %s total activities',
@@ -138,6 +139,27 @@ def stage_activities_full(access_token, connection):
     connection.commit()
 
     return rows_scanned, rows_loaded
+
+
+def insert_staged_new(connection):
+
+    cur = connection.cursor()
+    cur.execute("""CREATE TABLE activities_insert AS
+                   SELECT s.* FROM stg_activities s
+                   LEFT JOIN activities a ON s.activity_id = a.activity_id
+                   WHERE a.activity_id IS NULL;""")
+    connection.commit()
+
+    cur.execute("""SELECT COUNT(*) AS num FROM activities_insert;""")
+    num_insert = cur.fetchone()
+    if num_insert['num'] != 0:
+        cur.execute("""INSERT INTO activities
+                       SELECT * FROM activities_insert""")
+
+    cur.execute("""DROP TABLE IF EXISTS activities_insert;""")
+    connection.commit()
+
+    return num_insert['num']
 
 
 def main():
