@@ -1,3 +1,5 @@
 *.db
 *.json
 *.xlsx
+*.csv
+data/Archive - Duplicate Activities/*
