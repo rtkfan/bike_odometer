@@ -12,6 +12,7 @@ field_list = """activity_id,athlete_id,gear_id,name,
                 start_date,start_date_local,timezone,utc_offset,
                 start_lat,start_lng,end_lat,end_lng,
                 distance,moving_time,elapsed_time,total_elevation_gain"""
+mode = 'INCREMENTAL'  # either INCREMENTAL or FULL, make this an arg later
 
 
 def check_envvars():
@@ -102,7 +103,7 @@ def map_activities(in_dict):
     return out_tuple
 
 
-def stage_activities_full(access_token, connection):
+def stage_activities(access_token, connection, latest_activity):
 
     ipage = 1
     rows_scanned = 0
@@ -116,7 +117,8 @@ def stage_activities_full(access_token, connection):
 
     while True:
         payload = {'access_token': access_token,
-                   'page': ipage}
+                   'page': ipage,
+                   'after': latest_activity}
         r = requests.get(endpoint_activities, params=payload)
         logging.info('API usage: %s requests last 15 min/today; limit %s',
                      r.headers['X-RateLimit-Usage'],
@@ -207,7 +209,17 @@ def main():
                                     athlete_id)
     logging.info('Fetched access token: %s', access_token)
 
-    rows_scanned, rows_loaded = stage_activities_full(access_token, con)
+    if mode == 'FULL':
+        after = 0
+    else:
+        cur = con.cursor()
+        cur.execute("""SELECT strftime('%s', MAX(start_date))
+                                AS latest_activity
+                       FROM activities;""")
+        latest_row = cur.fetchone()
+        after = latest_row['latest_activity']
+
+    rows_scanned, rows_loaded = stage_activities(access_token, con, after)
     logging.info('%s %s %s %s %s',
                  'Activities staging table loaded;',
                  rows_loaded,
