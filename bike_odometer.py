@@ -8,6 +8,10 @@ import logging
 
 endpoint_token = 'https://www.strava.com/oauth/token'
 endpoint_activities = 'https://www.strava.com/api/v3/athlete/activities'
+field_list = """activity_id,athlete_id,gear_id,name,
+                start_date,start_date_local,timezone,utc_offset,
+                start_lat,start_lng,end_lat,end_lng,
+                distance,moving_time,elapsed_time,total_elevation_gain"""
 
 
 def check_envvars():
@@ -107,7 +111,8 @@ def stage_activities_full(access_token, connection):
     cur = connection.cursor()
     cur.execute("""DROP TABLE IF EXISTS stg_activities;""")
     cur.execute("""CREATE TABLE stg_activities
-                   AS SELECT * FROM activities WHERE FALSE;""")
+                   AS SELECT """ + field_list +
+                """ FROM activities WHERE FALSE;""")
 
     while True:
         payload = {'access_token': access_token,
@@ -121,14 +126,8 @@ def stage_activities_full(access_token, connection):
             break
         rows_scanned += len(response)
         rows = [map_activities(i) for i in response if i['type'] == 'Ride']
-        cur.executemany("""INSERT INTO stg_activities(
-                           activity_id, athlete_id, gear_id, name,
-                           start_date, start_date_local, timezone, utc_offset,
-                           start_lat, start_lng, end_lat, end_lng,
-                           distance, moving_time, elapsed_time,
-                           total_elevation_gain)
-                           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                                  CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
+        cur.executemany("""INSERT INTO stg_activities
+                           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                         rows)
         rows_loaded += len(rows)
         logging.info('Staged %s rides so far out of %s total activities',
@@ -145,7 +144,10 @@ def insert_staged_new(connection):
 
     cur = connection.cursor()
     cur.execute("""CREATE TABLE activities_insert AS
-                   SELECT s.* FROM stg_activities s
+                   SELECT s.*,
+                          CURRENT_TIMESTAMP,
+                          CURRENT_TIMESTAMP
+                   FROM stg_activities s
                    LEFT JOIN activities a ON s.activity_id = a.activity_id
                    WHERE a.activity_id IS NULL;""")
     connection.commit()
