@@ -164,6 +164,33 @@ def insert_staged_new(connection):
     return num_insert['num']
 
 
+def update_staged_updated(connection):
+
+    cur = connection.cursor()
+    cur.execute("""CREATE TABLE activities_update AS
+                   SELECT t.*,
+                   a.created_at,
+                   CURRENT_TIMESTAMP
+                   FROM (SELECT """+field_list+""" FROM stg_activities
+                   EXCEPT
+                   SELECT """+field_list+""" FROM activities) t
+                   INNER JOIN activities a ON t.activity_id = a.activity_id""")
+    connection.commit()
+
+    cur.execute("""SELECT COUNT(*) AS num FROM activities_update;""")
+    num_update = cur.fetchone()
+    if num_update['num'] != 0:
+        cur.execute("""DELETE FROM activities WHERE activity_id IN
+                       (SELECT activity_id FROM activities_update)""")
+        cur.execute("""INSERT INTO activities
+                       SELECT * FROM activities_update""")
+
+    cur.execute("""DROP TABLE IF EXISTS activities_update;""")
+    connection.commit()
+
+    return num_update['num']
+
+
 def main():
 
     logging.basicConfig(format='%(levelname)s %(asctime)s: %(message)s',
@@ -181,7 +208,6 @@ def main():
     logging.info('Fetched access token: %s', access_token)
 
     rows_scanned, rows_loaded = stage_activities_full(access_token, con)
-
     logging.info('%s %s %s %s %s',
                  'Activities staging table loaded;',
                  rows_loaded,
@@ -189,7 +215,18 @@ def main():
                  rows_scanned,
                  'activities total')
 
+    num_inserted = insert_staged_new(con)
+    plural_token = 'y' if num_inserted == 1 else 'ies'
+    logging.info('Inserted %s new activit%s', num_inserted, plural_token)
+
+    num_updated = update_staged_updated(con)
+    plural_token = 'y' if num_inserted == 1 else 'ies'
+    logging.info('Updated %s existing activit%s', num_updated, plural_token)
+
     # close up shop
+    cur = con.cursor()
+    cur.execute("""DROP TABLE stg_activities""")
+    con.commit()
     con.close()
 
 
