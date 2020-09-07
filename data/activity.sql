@@ -1,5 +1,5 @@
-CREATE TABLE "activities" (
-	"activity_id"	INTEGER NOT NULL UNIQUE,
+CREATE TABLE "activity" (
+	"activity_id"	BIGINT NOT NULL UNIQUE,
 	"athlete_id"	INTEGER,
 	"gear_id"	TEXT,
 	"name"	TEXT,

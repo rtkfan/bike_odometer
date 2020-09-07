@@ -70,7 +70,7 @@ def get_access_token(connection, clientid, clientsecret, athleteid):
     return valid_access_token
 
 
-def map_activities(in_dict):
+def map_activity(in_dict):
 
     if in_dict['start_latlng'] is None:
         startlatlng = [None, None]
@@ -110,10 +110,10 @@ def stage_activities(access_token, connection, latest_activity):
     rows_loaded = 0
 
     cur = connection.cursor()
-    cur.execute("""DROP TABLE IF EXISTS stg_activities;""")
-    cur.execute("""CREATE TABLE stg_activities
+    cur.execute("""DROP TABLE IF EXISTS stg_activity;""")
+    cur.execute("""CREATE TABLE stg_activity
                    AS SELECT """ + field_list +
-                """ FROM activities WHERE FALSE;""")
+                """ FROM activity WHERE FALSE;""")
 
     while True:
         payload = {'access_token': access_token,
@@ -127,8 +127,8 @@ def stage_activities(access_token, connection, latest_activity):
         if response == []:
             break
         rows_scanned += len(response)
-        rows = [map_activities(i) for i in response if i['type'] == 'Ride']
-        cur.executemany("""INSERT INTO stg_activities
+        rows = [map_activity(i) for i in response if i['type'] == 'Ride']
+        cur.executemany("""INSERT INTO stg_activity
                            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                         rows)
         rows_loaded += len(rows)
@@ -145,22 +145,22 @@ def stage_activities(access_token, connection, latest_activity):
 def insert_staged_new(connection):
 
     cur = connection.cursor()
-    cur.execute("""CREATE TABLE activities_insert AS
+    cur.execute("""CREATE TABLE activity_insert AS
                    SELECT s.*,
                           CURRENT_TIMESTAMP,
                           CURRENT_TIMESTAMP
-                   FROM stg_activities s
-                   LEFT JOIN activities a ON s.activity_id = a.activity_id
+                   FROM stg_activity s
+                   LEFT JOIN activity a ON s.activity_id = a.activity_id
                    WHERE a.activity_id IS NULL;""")
     connection.commit()
 
-    cur.execute("""SELECT COUNT(*) AS num FROM activities_insert;""")
+    cur.execute("""SELECT COUNT(*) AS num FROM activity_insert;""")
     num_insert = cur.fetchone()
     if num_insert['num'] != 0:
-        cur.execute("""INSERT INTO activities
-                       SELECT * FROM activities_insert""")
+        cur.execute("""INSERT INTO activity
+                       SELECT * FROM activity_insert""")
 
-    cur.execute("""DROP TABLE IF EXISTS activities_insert;""")
+    cur.execute("""DROP TABLE IF EXISTS activity_insert;""")
     connection.commit()
 
     return num_insert['num']
@@ -169,25 +169,25 @@ def insert_staged_new(connection):
 def update_staged_updated(connection):
 
     cur = connection.cursor()
-    cur.execute("""CREATE TABLE activities_update AS
+    cur.execute("""CREATE TABLE activity_update AS
                    SELECT t.*,
                    a.created_at,
                    CURRENT_TIMESTAMP
-                   FROM (SELECT """+field_list+""" FROM stg_activities
+                   FROM (SELECT """+field_list+""" FROM stg_activity
                    EXCEPT
-                   SELECT """+field_list+""" FROM activities) t
-                   INNER JOIN activities a ON t.activity_id = a.activity_id""")
+                   SELECT """+field_list+""" FROM activity) t
+                   INNER JOIN activity a ON t.activity_id = a.activity_id""")
     connection.commit()
 
-    cur.execute("""SELECT COUNT(*) AS num FROM activities_update;""")
+    cur.execute("""SELECT COUNT(*) AS num FROM activity_update;""")
     num_update = cur.fetchone()
     if num_update['num'] != 0:
-        cur.execute("""DELETE FROM activities WHERE activity_id IN
-                       (SELECT activity_id FROM activities_update)""")
-        cur.execute("""INSERT INTO activities
-                       SELECT * FROM activities_update""")
+        cur.execute("""DELETE FROM activity WHERE activity_id IN
+                       (SELECT activity_id FROM activity_update)""")
+        cur.execute("""INSERT INTO activity
+                       SELECT * FROM activity_update""")
 
-    cur.execute("""DROP TABLE IF EXISTS activities_update;""")
+    cur.execute("""DROP TABLE IF EXISTS activity_update;""")
     connection.commit()
 
     return num_update['num']
@@ -215,7 +215,7 @@ def main():
         cur = con.cursor()
         cur.execute("""SELECT strftime('%s', MAX(start_date))
                                 AS latest_activity
-                       FROM activities;""")
+                       FROM activity;""")
         latest_row = cur.fetchone()
         after = latest_row['latest_activity']
 
@@ -237,7 +237,7 @@ def main():
 
     # close up shop
     cur = con.cursor()
-    cur.execute("""DROP TABLE stg_activities""")
+    cur.execute("""DROP TABLE stg_activity""")
     con.commit()
     con.close()
 
